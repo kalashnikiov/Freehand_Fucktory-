@@ -339,6 +339,15 @@
 #radioPlayerInfo{padding:9px 11px;border-radius:10px;background:rgba(255,255,255,.07);font-size:12px}
 
 .radioPhoneControls{display:flex;gap:8px;margin-top:8px}.radioPhoneControls .btn{flex:1;padding:9px 8px;font-size:12px}
+
+.starterBundleWrap{margin:10px 0 14px;padding:10px;border:1px solid #596b54;border-radius:14px;background:#1a281f}
+.starterBundleGrid{display:grid;grid-template-columns:1fr;gap:8px}
+.starterBundle{margin:0;padding:10px;display:flex;flex-direction:column;gap:5px}
+.starterBundle small{color:#c3d2bc}.starterBundle p{font-size:12px;margin:2px 0 5px}
+.starterBundle button{margin-top:auto}
+.setupPresets{display:flex;flex-wrap:wrap;gap:6px;margin:7px 0 12px}
+.setupPresets .btn{font-size:11px;padding:8px}
+
 </style></head><body>
 <div class="startOverlay" id="startOverlay"><div class="menuCard"><div class="menuLogo">FREEHAND <span>FUCKTORY</span></div><div class="menuSub">TATTOO STUDIO LIFE SIM</div><div class="menuActions"><button class="menuButton primary" id="startCareer">▶ NUOVA CARRIERA<small>Entra nello studio e scegli il tuo percorso</small></button><button class="menuButton" id="resumeGame">↩ RIPRENDI<small>Continua la carriera attiva</small></button><button class="menuButton" id="manageSaves">💾 GESTISCI CARRIERE<small>Più partite e salvataggi indipendenti</small></button><button class="menuButton" id="tutorialReplay">📖 TUTORIAL<small>Rivedi come funziona il gioco</small></button><button class="menuButton" id="settingsToggle">⚙ IMPOSTAZIONI<small>Camera, grafica e preferenze</small></button><button class="menuButton" id="aboutToggle">ℹ INFO GIOCO<small>Freehand Fucktory · Life simulator</small></button></div><div class="menuSettings" id="menuSettings"><label>Zoom iniziale <input type="range" min="0.65" max="1.45" step="0.05" value="1" id="menuZoom"></label><p class="menuHint">Regola la visuale per il tuo dispositivo. Le modifiche sono salvate sul dispositivo.</p><button class="menuButton" id="cameraResetMenu">↻ Reimposta camera</button><button class="menuButton" id="settingsBack">← Indietro</button></div><div id="gameInfo" class="menuSettings"><p>Gestisci la carriera, parla con i clienti, realizza tatuaggi, completa missioni e partecipa alle convention per costruire la tua fama.</p><button class="menuButton" id="infoBack">← Indietro</button></div><div class="menuHint">Fino a 6 carriere · Salvataggi locali indipendenti</div></div></div><canvas id="scene"></canvas><div class="hud"><div class="chip" style="font-family:Georgia;letter-spacing:1px">FREEHAND <b style="color:#e95bc8">FUCKTORY</b></div><div class="chip">🕒 <b id="gameClock">12:00</b> · <b id="studioStatus">APERTO</b></div><div class="chip cash-chip">€ <b id="cash">180</b><div id="pendingPay" class="small">Da incassare sabato: €0</div></div>
 <div class="chip progress-chip"><div class="progress-head">⭐ <b>Rep <span id="rep">0</span></b><span id="repLevel">Liv. 1</span></div><div class="progress-track"><div id="repProgress" class="progress-fill rep-fill" style="width:0%"></div></div></div>
@@ -681,7 +690,8 @@ function openCharacterCustomization(chosen){
  document.querySelector('#confirmCharacterLook').onclick=()=>{
   const chosenLook={hair:document.querySelector('#customHair').value,outfit:document.querySelector('#customOutfit').value,outfitColor:document.querySelector('#customColor').value,accessory:document.querySelector('#customAccessory').value};
   resetCareerState();characterCustomization=chosenLook;cash=STARTING_BUDGET;rep=0;career=chosen;save(false);updateHUD();draw();closePanel();
-  if(localStorage.getItem('fh_tutorial_seen_v1')!=='1')showTutorial();else{hideStartMenu();toast('Nuova partita: '+cast[career].name)}
+  // La guida deve comparire all'avvio di ogni nuova carriera, anche se era già stata vista in una partita precedente.
+  showTutorial();
  };
  document.querySelector('#backCharacterPick').onclick=()=>newGamePicker();
 }
@@ -1143,6 +1153,7 @@ function startProjectSession(){
  const needleOptions=needles.map(x=>`<option value="${x.id}">${x.name} · ${supplyUnits[x.id]} unità</option>`).join('');
  const inkOptions=inks.map(x=>`<option value="${x.id}">${x.name} · ${supplyUnits[x.id]} unità</option>`).join('');
  openPanel(`<h2>Prepara la postazione</h2><div class="card"><b>${activeProject.name}</b><p>${activeProject.style} · ${activeProject.placement} · ${activeProject.size}</p><p>Durata: ${durationLabel(minutes)} · Compenso: €${activeProject.pricePerSession}</p></div>
+ <div class="card"><b>⚡ Preset rapidi</b><p class="small">Carica una configurazione già pronta. Puoi comunque modificare ogni voce prima di confermare.</p><div class="setupPresets"><button class="btn" type="button" data-setup-preset="chicano">🐍 Chicano / B&G</button><button class="btn" type="button" data-setup-preset="realism">🖤 Realistico</button><button class="btn" type="button" data-setup-preset="fineline">✒️ Fine line</button><button class="btn" type="button" data-setup-preset="color">🎨 Traditional color</button><button class="btn" type="button" data-setup-preset="mixed">🌓 Misto</button></div></div>
  <label>🖊️ Macchinetta</label><select id="sessionMachine"><option value="studio_basic">Macchinetta base dello studio</option>${machineOptions}</select>
  <label>🪡 Scorta cartucce</label><select id="sessionNeedle"><option value="">Nessuna cartuccia acquistata</option>${needleOptions}</select>
  <label>Configurazione aghi (selezione multipla)</label><select id="sessionNeedleTypes" multiple size="4" style="min-height:105px"><option value="round_liner">Round Liner · linee e contorni</option><option value="round_shader">Round Shader · dettagli e ombre</option><option value="magnum">Magnum · riempimenti</option><option value="curved_magnum">Curved Magnum · sfumature morbide</option></select><p class="small">Per un realistico puoi combinare liner, shader e magnum.</p>
@@ -1164,7 +1175,39 @@ function startProjectSession(){
    host.querySelectorAll('[data-mixmode]').forEach(el=>el.onchange=()=>{const i=el.dataset.mixmode,box=host.querySelector(`[data-mixcontrol="${i}"]`);box.innerHTML=el.value==='color'?`<select data-colorcup="${i}"><option value="">Seleziona pigmento</option>${colorOptions}</select>`:`<select data-graycup="${i}">${grayOptions.map(v=>`<option value="${v}">${v}%</option>`).join('')}</select>`;});
   }
  };
+
  renderCups();
+ const applySetupPreset=(preset)=>{
+  const machineEl=document.querySelector('#sessionMachine'),needleEl=document.querySelector('#sessionNeedle'),typesEl=document.querySelector('#sessionNeedleTypes'),modeEl=document.querySelector('#sessionInkMode'),inksEl=document.querySelector('#sessionInks'),cupsEl=document.querySelector('#sessionCups');
+  const configs={
+   chicano:{types:['round_liner','round_shader','curved_magnum'],mode:'blackgray',inks:['black_ink','white_ink'],cups:5,gray:[20,40,60,80,100]},
+   realism:{types:['round_liner','round_shader','magnum','curved_magnum'],mode:'blackgray',inks:['black_ink','white_ink'],cups:7,gray:[10,20,35,50,65,80,100]},
+   fineline:{types:['round_liner','round_shader'],mode:'blackgray',inks:['black_ink'],cups:3,gray:[25,55,100]},
+   color:{types:['round_liner','round_shader','magnum'],mode:'color',inks:['color_set'],cups:5,colors:['color_set']},
+   mixed:{types:['round_liner','magnum','curved_magnum'],mode:'mixed',inks:['black_ink','color_set'],cups:5,gray:[20,40,60],colors:['','color_set','color_set','','']}
+  };
+  const cfg=configs[preset];if(!cfg)return;
+  [...typesEl.options].forEach(o=>o.selected=cfg.types.includes(o.value));
+  modeEl.value=cfg.mode;cupsEl.value=String(cfg.cups);
+  [...inksEl.options].forEach(o=>o.selected=cfg.inks.includes(o.value));
+  if(needleEl.options.length>1)needleEl.selectedIndex=1;
+  if(machineEl.options.length>1)machineEl.selectedIndex=machineEl.options.length-1;
+  renderCups();
+  if(cfg.mode==='blackgray'){
+   document.querySelectorAll('[data-graycup]').forEach((el,i)=>el.value=String(cfg.gray[Math.min(i,cfg.gray.length-1)]));
+  }else{
+   document.querySelectorAll('[data-mixmode]').forEach((el,i)=>{
+    el.value=cfg.colors?.[i]?'color':'gray';el.dispatchEvent(new Event('change'));
+   });
+   document.querySelectorAll('[data-graycup]').forEach((el,i)=>el.value=String(cfg.gray?.[Math.min(i,cfg.gray.length-1)]??40));
+   document.querySelectorAll('[data-colorcup]').forEach((el,i)=>{
+    const chosen=cfg.colors?.[i]||cfg.colors?.find(Boolean)||'';
+    if(chosen&&[...el.options].some(o=>o.value===chosen))el.value=chosen;
+   });
+  }
+  toast('Preset caricato: '+({chicano:'Chicano / Black & Grey',realism:'Realistico',fineline:'Fine line',color:'Traditional color',mixed:'Misto'}[preset]));
+ };
+ document.querySelectorAll('[data-setup-preset]').forEach(b=>b.onclick=()=>applySetupPreset(b.dataset.setupPreset));
  document.querySelector('#sessionCups').onchange=renderCups;
  document.querySelector('#sessionInkMode').onchange=renderCups;
  document.querySelector('#confirmSessionSetup').onclick=()=>{
@@ -1853,7 +1896,11 @@ function phoneMenu(tab='Home'){
   const cats=['Tutte','Macchine','Alimentatori','Aghi / Cartucce','Inchiostri','Stencil','Igiene','Accessori','Arredo','Illuminazione','Formazione'];
   const normShopCat=v=>String(v||'').trim().toLocaleLowerCase('it');
   const items=allShopCatalog;
-  body=`<p class="small">Supply professionale: pen rotative, wireless e macchine tradizionali a bobina, oltre a inchiostri di marchi come Eternal Ink, Solid Ink, World Famous, Kuro Sumi, Intenze, Radiant Colors, Eclipse, I AM INK e Viking Ink. I prezzi con fonte sono riferimenti pubblicati dai rivenditori; gli altri sono stime di gioco.</p><div class="shopCats shopCategoryChips">${cats.map(c=>`<button class="btn ${shopCategory===c?'selected':''}" data-shopcat="${c}">${c}</button>`).join('')}</div><input id="shopSearch" class="shopSearch" type="search" placeholder="🔎 Cerca macchine, aghi, colori, arredo..." autocomplete="off"><p class="small shopResultCount">${shopCategory==='Tutte'?'Tutti i prodotti':shopCategory+' · '+items.length+' prodotti'}</p><div class="shopCats"><select id="shopBrand">${['Tutti','Cheyenne','FK Irons','Bishop','Inkjecta','Critical','Dragonhawk','Sunskin','Fluid','Lauro Paolini','Kwadron','Dynamic','Panthera','Eternal Ink','World Famous','Intenze','Radiant Colors','Solid Ink','Kuro Sumi','Viking Ink','Eclipse','I AM INK','Brother','Wacom','Freehand Supply','Stigma','Unistar','Electrum','Generic'].map(b=>`<option ${shopBrand===b?'selected':''}>${b}</option>`).join('')}</select></div><div class="shopGrid">${items.map(x=>`<div class="card shopItem" data-shop-item data-category="${x.cat}" data-brand="${x.brand||'Freehand Supply'}" data-search="${(x.name+' '+(x.brand||'')+' '+x.cat+' '+x.desc).toLowerCase().replace(/"/g,'&quot;')}"><div class="shopProductVisual"><div class="shopIcon">${x.icon}</div></div>${shopBrandVisual(x.brand)}<b>${x.name}</b><small>${x.brand||'Freehand Supply'} · ${x.cat}</small><p>${x.desc}</p><b>€ ${x.price}</b><button class="btn" data-shopbuy="${x.id}" ${(ownedGear.includes(x.id)&&x.effect!=='stock'&&x.effect!=='ink')?'disabled':''}>${(ownedGear.includes(x.id)&&x.effect!=='stock'&&x.effect!=='ink')?'Acquistato':'Acquista'}</button></div>`).join('')}</div>`;
+  body=`<p class="small">Supply professionale: pen rotative, wireless e macchine tradizionali a bobina, oltre a inchiostri di marchi come Eternal Ink, Solid Ink, World Famous, Kuro Sumi, Intenze, Radiant Colors, Eclipse, I AM INK e Viking Ink. I prezzi con fonte sono riferimenti pubblicati dai rivenditori; gli altri sono stime di gioco.</p><div class="starterBundleWrap"><h3>🎒 Pacchetti iniziali</h3><p class="small">Kit completi per partire subito: macchina, alimentazione, cartucce, inchiostri e igiene. Acquistane uno solo; il contenuto viene caricato direttamente nell’inventario.</p><div class="starterBundleGrid">
+ <div class="card starterBundle"><b>🖤 Starter Black & Grey</b><small>Per iniziare con linee, neri e sfumature</small><p>Dragonhawk Mast Tour · Alimentatore · Kit cartucce · Set Black & Grey · Kit igiene</p><b>€ 699</b><button class="btn" data-buy-bundle="starter_bg">Acquista pacchetto</button></div>
+ <div class="card starterBundle"><b>🐍 Chicano Pro</b><small>Configurazione orientata a lettering e realistico</small><p>Mast Fold Pro · Alimentatore · Kit cartucce · Black & Grey · Bianco · Kit igiene</p><b>€ 849</b><button class="btn" data-buy-bundle="chicano_pro">Acquista pacchetto</button></div>
+ <div class="card starterBundle"><b>🎨 Starter Full Color</b><small>Per traditional, new school e lavori a colori</small><p>Mast Tour · Alimentatore · Kit cartucce · Set colori · Black & Grey · Kit igiene</p><b>€ 899</b><button class="btn" data-buy-bundle="full_color">Acquista pacchetto</button></div>
+ </div></div><div class="shopCats shopCategoryChips">${cats.map(c=>`<button class="btn ${shopCategory===c?'selected':''}" data-shopcat="${c}">${c}</button>`).join('')}</div><input id="shopSearch"  class="shopSearch" type="search" placeholder="🔎 Cerca macchine, aghi, colori, arredo..." autocomplete="off"><p class="small shopResultCount">${shopCategory==='Tutte'?'Tutti i prodotti':shopCategory+' · '+items.length+' prodotti'}</p><div class="shopCats"><select id="shopBrand">${['Tutti','Cheyenne','FK Irons','Bishop','Inkjecta','Critical','Dragonhawk','Sunskin','Fluid','Lauro Paolini','Kwadron','Dynamic','Panthera','Eternal Ink','World Famous','Intenze','Radiant Colors','Solid Ink','Kuro Sumi','Viking Ink','Eclipse','I AM INK','Brother','Wacom','Freehand Supply','Stigma','Unistar','Electrum','Generic'].map(b=>`<option ${shopBrand===b?'selected':''}>${b}</option>`).join('')}</select></div><div class="shopGrid">${items.map(x=>`<div class="card shopItem" data-shop-item data-category="${x.cat}" data-brand="${x.brand||'Freehand Supply'}" data-search="${(x.name+' '+(x.brand||'')+' '+x.cat+' '+x.desc).toLowerCase().replace(/"/g,'&quot;')}"><div class="shopProductVisual"><div class="shopIcon">${x.icon}</div></div>${shopBrandVisual(x.brand)}<b>${x.name}</b><small>${x.brand||'Freehand Supply'} · ${x.cat}</small><p>${x.desc}</p><b>€ ${x.price}</b><button class="btn" data-shopbuy="${x.id}" ${(ownedGear.includes(x.id)&&x.effect!=='stock'&&x.effect!=='ink')?'disabled':''}>${(ownedGear.includes(x.id)&&x.effect!=='stock'&&x.effect!=='ink')?'Acquistato':'Acquista'}</button></div>`).join('')}</div>`;
  }else if(tab==='Inventario'){
   const equipmentRows=ownedGear.map(id=>{
    const item=allShopCatalog.find(x=>x.id===id);if(!item)return '';
@@ -2038,6 +2085,7 @@ document.querySelector('#aiTrain')?.addEventListener('click',()=>{
  }
  const bs=document.querySelector('#shopBrand');if(bs)bs.onchange=()=>{shopBrand=bs.value;phoneMenu('Shop')};
  document.querySelectorAll('[data-shopbuy]').forEach(b=>b.onclick=()=>buyShopItem(b.dataset.shopbuy));
+ document.querySelectorAll('[data-buy-bundle]').forEach(b=>b.onclick=()=>buyStarterBundle(b.dataset.buyBundle));
  document.querySelectorAll('[data-train]').forEach(b=>b.onclick=()=>trainSkill(b.dataset.train));
  const retryIg=document.querySelector('#retryInstagram');if(retryIg)retryIg.onclick=()=>phoneMenu('Instagram');
  const igNew=document.querySelector('#igNewPost');if(igNew)igNew.onclick=()=>openPanel(`<h2>📸 Nuovo post</h2><p>Completa una seduta e scegli di fotografare il tatuaggio per pubblicarlo sul tuo profilo.</p><button class="btn" id="igPostOk">Va bene</button>`);
@@ -2046,6 +2094,32 @@ document.querySelector('#aiTrain')?.addEventListener('click',()=>{
  const camIg=document.querySelector('#cameraBackToIg');if(camIg)camIg.onclick=()=>phoneMenu('Instagram');
 
 }
+
+const starterBundles={
+ starter_bg:{name:'Starter Black & Grey',price:699,items:['machine_dragonhawk_mast_tour','power_supply','needle_pack','black_ink','sterile_kit']},
+ chicano_pro:{name:'Chicano Pro',price:849,items:['machine_dragonhawk_mast_fold','power_supply','needle_pack','black_ink','white_ink','sterile_kit']},
+ full_color:{name:'Starter Full Color',price:899,items:['machine_dragonhawk_mast_tour','power_supply','needle_pack','black_ink','color_set','sterile_kit']}
+};
+function buyStarterBundle(id){
+ const bundle=starterBundles[id];if(!bundle)return;
+ if(bundle.items.every(itemId=>ownedGear.includes(itemId)||inkStock.includes(itemId))){toast('Hai già tutti gli articoli di questo pacchetto.');return}
+ if(cash<bundle.price){toast('Fondi insufficienti: servono €'+bundle.price+'.');return}
+ cash-=bundle.price;
+ bundle.items.forEach(itemId=>{
+  const item=allShopCatalog.find(x=>x.id===itemId);if(!item)return;
+  if(item.effect==='stock'||item.effect==='ink'){
+   if(!inkStock.includes(itemId))inkStock.push(itemId);
+   supplyUnits[itemId]=(supplyUnits[itemId]||0)+(item.effect==='stock'?60:100);
+  }else{
+   if(!ownedGear.includes(itemId))ownedGear.push(itemId);
+   if(item.cat==='Macchine'&&!machineAge[itemId])machineAge[itemId]={years:0,condition:100};
+   if(equipmentWear[itemId]==null)equipmentWear[itemId]=100;
+  }
+ });
+ save(false);updateHUD();phoneMenu('Shop');
+ toast(bundle.name+' acquistato: attrezzatura caricata nell’inventario!');
+}
+
 function buyShopItem(id){
  const item=allShopCatalog.find(x=>x.id===id);if(!item)return;
  if(item.effect!=='stock'&&item.effect!=='ink'&&(ownedGear.includes(id))){toast('Articolo già acquistato');return}
