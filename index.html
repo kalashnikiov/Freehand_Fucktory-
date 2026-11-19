@@ -872,6 +872,14 @@ function consultStep2(){
    client.placement=piercingZones[client.style];
    client.refChoice=null;consultStep3();return;
  }
+ if(String(client.style||'').toLowerCase()==='lettering' && !client.letteringText){
+  const fonts=[['chicano','Chicano script'],['blackletter','Old English / Blackletter'],['corsivo','Corsivo elegante'],['gotico','Gotico'],['calligrafico','Calligrafico'],['typewriter','Typewriter']];
+  openPanel(`<h2>✒️ Lettering personalizzato</h2><p>Inserisci la frase esatta che il cliente vuole tatuarsi e scegli lo stile della scritta.</p><label>Frase da tatuare</label><textarea id="letteringPhrase" rows="2" maxlength="90" placeholder="Scrivi qui la frase, il nome o la data…" style="width:100%;padding:12px;border-radius:10px;background:#243128;color:white;border:1px solid #65745f"></textarea><label>Stile del carattere</label><select id="letteringFont" style="width:100%;padding:12px;border-radius:10px;background:#243128;color:white;border:1px solid #65745f">${fonts.map(f=>`<option value="${f[0]}">${f[1]}</option>`).join('')}</select><div class="card" id="letteringLive" style="text-align:center;font-size:27px;overflow-wrap:anywhere;font-family:Georgia,serif">Anteprima lettering</div><button class="btn" id="confirmLettering">Conferma frase e continua</button><button class="btn" id="backLettering">Indietro</button>`);
+  const phrase=document.querySelector('#letteringPhrase'),font=document.querySelector('#letteringFont'),live=document.querySelector('#letteringLive');
+  const update=()=>{const stacks={chicano:'cursive',blackletter:'Georgia,serif',corsivo:'cursive',gotico:'serif',calligrafico:'cursive',typewriter:'monospace'};live.textContent=phrase.value.trim()||'Anteprima lettering';live.style.fontFamily=stacks[font.value];live.style.fontStyle=['corsivo','calligrafico'].includes(font.value)?'italic':'normal';live.style.fontWeight=['chicano','blackletter','gotico'].includes(font.value)?'bold':'normal';live.style.letterSpacing=font.value==='typewriter'?'2px':'0'};
+  phrase.oninput=update;font.onchange=update;
+  document.querySelector('#confirmLettering').onclick=()=>{const value=phrase.value.trim();if(!value){toast('Inserisci la frase da tatuare.');return}client.letteringText=value;client.letteringFont=font.value;client.designMode='lettering';consultStep2()};document.querySelector('#backLettering').onclick=consultStep1;return;
+ }
  openPanel(`<h2>Posizionamento</h2><p>«Dove lo vorresti?»</p><div class="cards">${['Avambraccio','Braccio','Polpaccio','Coscia','Petto','Schiena','Orecchio / viso'].map(v=>`<button class="choice" data-place="${v}">${v}</button>`).join('')}</div><button class="btn" id="backStyle">Indietro</button>`);
  document.querySelectorAll('[data-place]').forEach(el=>el.onclick=()=>{client.placement=el.dataset.place;consultStep3()});document.querySelector('#backStyle').onclick=consultStep1
 }
@@ -904,13 +912,20 @@ function freehandGame(){
   return `<svg viewBox="0 0 700 700" role="img" aria-label="Bozza freehand ${esc(sub)}" style="width:100%;max-height:360px;background:#f1eee5;border-radius:14px"><g transform="${transform}">${art}</g><g fill="none" stroke="${accent}" stroke-width="5" opacity=".9">${chosen.Elementi.includes('Raggi e raggiera')?'<path d="M350 35V100 M350 600V665 M35 350H100 M600 350H665 M130 130L180 180 M520 520L570 570 M570 130L520 180 M180 520L130 570"/>':''}${chosen.Elementi.includes('Onde')?'<path d="M90 570q40 -35 80 0t80 0 M370 570q40 -35 80 0t80 0"/>':''}${chosen.Elementi.includes('Fulmini')?'<path d="M520 70l-65 125h55l-70 130"/>':''}</g></svg>`;
  }
  function render(){
-  openPanel(`<h2>✍️ Freehand Artist</h2><p>Costruisci una composizione precisa: ogni scelta modifica la bozza qui sotto. Nessun soggetto o dettaglio viene estratto a caso.</p><button class="btn" id="randomFreehand">🎲 Genera tutto casualmente</button>
+  openPanel(`<h2>✍️ Freehand Artist</h2><p>Costruisci una composizione precisa: ogni scelta modifica la bozza qui sotto. Nessun soggetto o dettaglio viene estratto a caso.</p><button class="btn" id="randomFreehand">🎲 Genera tutto casualmente</button><div class="card"><b>🧠 Generatore di concept Freehand</b><p class="small">Descrivi l’idea: il generatore locale costruisce una bozza grafica modificabile. Non è ancora un generatore AI esterno.</p><textarea id="freehandPrompt" rows="3" maxlength="500" placeholder="Es. una rosa con pugnale, fumo e lettering gotico…" style="width:100%;padding:12px;border-radius:10px;background:#243128;color:white;border:1px solid #65745f">${esc(client.freehandPrompt||'')}</textarea><button class="btn" id="generateFreehandConcept">✨ Genera concept visivo</button></div>
   <div class="card"><b>1 · Soggetto principale · scegline uno</b><div class="cards">${groups.Soggetto.map(v=>`<button class="choice" data-group="Soggetto" data-value="${esc(v)}" style="${chosen.Soggetto.includes(v)?'border-color:#b6e99b;background:#29432d':''}">${v}</button>`).join('')}</div></div>
   ${Object.keys(groups).filter(k=>k!=='Soggetto').map(k=>`<div class="card"><b>${k} · ${limits[k]===1?'scegline uno':'fino a '+limits[k]}</b><div class="cards">${groups[k].map(v=>`<button class="choice" data-group="${k}" data-value="${esc(v)}" style="${chosen[k].includes(v)?'border-color:#b6e99b;background:#29432d':''}">${v}</button>`).join('')}</div></div>`).join('')}
   <p class="small">Anteprima della composizione</p>${artwork()}
   <p class="small">Artista: ${a.name} · Specialità: ${a.role}. Le abilità di disegno e la coerenza con lo stile influenzano la valutazione, non cambiano casualmente il disegno.</p>
   <button class="btn" id="previewFreehand">Mostra bozza completa al cliente</button><button class="btn" id="cancelFreehand">Indietro</button>`);
   document.querySelectorAll('[data-group]').forEach(b=>b.onclick=()=>{const g=b.dataset.group,v=b.dataset.value;chosen[g]=chosen[g].includes(v)?chosen[g].filter(x=>x!==v):limits[g]===1?[v]:chosen[g].length<limits[g]?[...chosen[g],v]:chosen[g];render()});
+  document.querySelector('#generateFreehandConcept').onclick=()=>{
+   const prompt=document.querySelector('#freehandPrompt').value.trim();if(!prompt){toast('Descrivi prima il tatuaggio che vuoi creare.');return}client.freehandPrompt=prompt;const q=prompt.toLowerCase();
+   const rules=[[/rosa|rose|fiore|fiori/,'Rosa'],[/serpent|serpente|cobra/,'Serpente'],[/teschio|skull/,'Teschio'],[/lupo|wolf/,'Lupo'],[/pantera|panther/,'Pantera'],[/drago|dragon/,'Drago'],[/daga|pugnale|knife/,'Daga'],[/occhio|eye/,'Occhio'],[/farfalla|butterfly/,'Farfalla'],[/corvo|raven/,'Corvo'],[/angelo|angel/,'Angelo'],[/croce|cross/,'Croce'],[/cuore|heart/,'Cuore anatomico'],[/lettering|scritta|scritte|nome|frase/,'Lettering']];const found=rules.find(r=>r[0].test(q));if(found)chosen.Soggetto=[found[1]];
+   chosen.Composizione=[/orizzont|petto|torace/.test(q)?'Orizzontale / petto':/avvolg|polpaccio/.test(q)?'Avvolgente / polpaccio':/schiena/.test(q)?'A tutta schiena':'Verticale / avambraccio'];chosen.Elementi=[];
+   for(const [rx,val] of [[/fumo|smoke/,'Fumo e movimento'],[/catena|chain/,'Catene'],[/fulmine|lightning/,'Fulmini'],[/nuvol|cloud/,'Nuvole'],[/onda|mare|wave/,'Onde'],[/raggier|raggi/,'Raggi e raggiera'],[/ornament|cornice/,'Cornice ornamentale'],[/geometric/,'Elementi geometrici'],[/puntinat|dotwork/,'Puntinato']])if(rx.test(q)&&chosen.Elementi.length<3)chosen.Elementi.push(val);if(!chosen.Elementi.length)chosen.Elementi=['Texture e ombre'];
+   chosen.Tratto=[/fine.?line|sottile/.test(q)?'Fine line':/etching|incision/.test(q)?'Incisione / etching':/bold|spesso/.test(q)?'Bold / contorno spesso':'Pennellata morbida'];chosen.Ombreggiatura=[/contrasto|dark|nero pieno/.test(q)?'Contrasto alto':'Grigi morbidi'];chosen.Palette=[/colore|color|rosso|blu|verde/.test(q)?(isColor?'Rosso · giallo · nero':'Black & grey con piccoli accenti'):'Black & grey'];render();toast('Concept creato dalla descrizione. Puoi rifinirlo con le opzioni.');
+  };
   document.querySelector('#randomFreehand').onclick=()=>{
    Object.keys(groups).forEach(k=>{
     const shuffled=groups[k].slice().sort(()=>Math.random()-.5);
@@ -926,7 +941,7 @@ function freehandGame(){
    const specialty=(career===0&&/new school/.test(style))||(career===1&&/tribal|polynesian/.test(style))||(career===2&&/black|grey|neo/.test(style))||(career===3&&/ornamental/.test(style))||(career===4&&/japanese|giappon/.test(style))||(career===5&&/chicano|lettering/.test(style));
    const score=Math.min(100,55+Math.min(20,skill*2)+(specialty?12:0)+chosen.Elementi.length*3);
    openPanel(`<h2>🖌️ Bozza freehand</h2>${artwork()}<div class="card"><b>${esc(chosen.Soggetto[0])}</b><p>${esc(chosen.Composizione[0])}</p><p>${esc(chosen.Elementi.join(' · '))}</p><p>${esc(chosen.Tratto[0])} · ${esc(chosen.Ombreggiatura[0])}</p><p>Palette: ${esc(chosen.Palette[0])}</p><p><b>Coerenza tecnica: ${score}/100</b></p></div><p>Il cliente approva questa bozza oppure puoi tornare a modificarla. La composizione mostrata corrisponde alle opzioni selezionate.</p><button class="btn" id="acceptFreehand">Il cliente approva</button><button class="btn" id="redoFreehand">Modifica progetto</button>`);
-   document.querySelector('#acceptFreehand').onclick=()=>{client.designMode='freehand';client.freehandResult={...JSON.parse(JSON.stringify(chosen)),score};client.refName='Freehand originale';client.refChoice=null;consultStep3()};
+   document.querySelector('#acceptFreehand').onclick=()=>{client.designMode='freehand';client.freehandResult={...JSON.parse(JSON.stringify(chosen)),score,prompt:client.freehandPrompt||''};client.refName='Freehand originale';client.refChoice=null;consultStep3()};
    document.querySelector('#redoFreehand').onclick=render;
   };
   document.querySelector('#cancelFreehand').onclick=()=>{client.designMode=null;consultStep3()};
@@ -956,7 +971,8 @@ function consultStep3(){
    document.querySelector('#backPlace').onclick=()=>{client.designMode=null;consultStep3()};return
   }
  }
- openPanel(`<h2>Dimensione e preventivo</h2><p>Idea: <b>${client.style}</b><br>Posizione: <b>${client.placement}</b>${client.refChoice?'<br>Reference scelta: <b>'+(client.refName||('Reference '+client.refChoice))+'</b>':client.freehandResult?'<br>Progetto: <b>Freehand · '+client.freehandResult.subject+'</b> · Qualità '+client.freehandResult.score+'/100':''}</p>
+ openPanel(`<h2>Dimensione e preventivo</h2><p>Idea: <b>${client.style}</b>${client.letteringText?`<br>Frase: <b>${String(client.letteringText).replace(/[&<>"]+/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}</b> · Carattere: <b>${client.letteringFont||''}</b>`:''}
+<br>Posizione: <b>${client.placement}</b>${client.refChoice?'<br>Reference scelta: <b>'+(client.refName||('Reference '+client.refChoice))+'</b>':client.freehandResult?'<br>Progetto: <b>Freehand · '+client.freehandResult.subject+'</b> · Qualità '+client.freehandResult.score+'/100':''}</p>
  <div class="cards"><button class="choice" data-size="small">Piccolo</button><button class="choice" data-size="medium">Medio</button><button class="choice" data-size="large">Grande</button><button class="choice" data-size="xl">Progetto esteso</button></div>
  <p>Per progetti grandi puoi concordare più sedute e un compenso per ogni appuntamento.</p>
  <div class="card"><b>Richieste del cliente</b><p class="small">Quanto vuole spingersi con dettagli e personalizzazione?</p>
@@ -1256,13 +1272,27 @@ function finishSession(cost){
  if(ownedGear.includes('sterile_kit'))rep+=1;
  if(ownedGear.includes('light'))rep+=1;
  finished++;
- if(career!==null){artistRep[career]=(artistRep[career]||0)+20;
-  let before=missionProgress[career]||0;missionProgress[career]=before+1;
-  let hit=careerMissionCatalog[career].find(m=>m[2]===missionProgress[career]);
-  if(hit){let reward=hit[2]>=55?500:hit[2]>=25?250:100;cash+=reward;rep+=hit[2]>=55?25:hit[2]>=25?15:10;toast('Missione completata: '+hit[0]+' · Bonus +€'+reward)}
- }
+ if(career!==null){artistRep[career]=(artistRep[career]||0)+20;}
  activeProject.completedSessions++;
  const finishedProject=activeProject.completedSessions>=activeProject.totalSessions;
+ if(finishedProject && career!==null){
+  const progress=missionProgress[career]||0;
+  const currentMission=careerMissionCatalog[career].find(m=>progress<m[2]);
+  if(currentMission){
+   const missionText=(currentMission[0]+' '+currentMission[1]).toLowerCase();
+   const letteringRequired=/lettering|scritte|scritta|calligraf|nome sulla pelle/.test(missionText);
+   const isLettering=(String(activeProject.style||'').trim().toLowerCase()==='lettering')
+    || activeProject.designMode==='lettering'
+    || !!String(activeProject.letteringText||'').trim();
+   if(!letteringRequired || isLettering){
+    missionProgress[career]=progress+1;
+    const hit=careerMissionCatalog[career].find(m=>m[2]===missionProgress[career]);
+    if(hit){let reward=hit[2]>=55?500:hit[2]>=25?250:100;cash+=reward;rep+=hit[2]>=55?25:hit[2]>=25?15:10;toast('Missione completata: '+hit[0]+' · Bonus +€'+reward)}
+   }else{
+    toast('Questa missione richiede un vero tatuaggio Lettering: il lavoro non è stato conteggiato.');
+   }
+  }
+ }
  const projectName=activeProject.name;activeProject.lastQuality=quality;activeProject.qualityHistory=activeProject.qualityHistory||[];activeProject.qualityHistory.push(quality);if(client&&client.appointmentId){const booked=appointments.find(a=>a.id===client.appointmentId);if(booked)booked.status='done'}client=null;
  const completed=activeProject.completedSessions,total=activeProject.totalSessions;
  const completedProject=finishedProject?{...activeProject}:null;
