@@ -370,6 +370,7 @@
 const canvas=document.querySelector('#scene'),ctx=canvas.getContext('2d');let W=0,H=0,dpr=1;
 let cash=180,rep=0,career=null,client=null,finished=0,missionDone=false,decor=0;
 let missionProgress={},artistRep={};
+let customerMemory=[];
 let artistSkills={drawing:0,technique:0,hygiene:0,speed:0,communication:0};
 let ownedGear=[],inkStock=[],supplyUnits={},machineAge={},equipmentWear={},shopPurchases={},studioExpansion=0,studioStaff=[];let gameMinutes=720,gameDay=1;let activeProject=null;let pendingCash=0;let appointments=[];
 let cam={zoom:1,panX:0,panY:0,rotation:0},drag=null,lastTap=0;
@@ -792,7 +793,18 @@ function makeWalkIn(day,index){
   ['Ornamentale','Coscia','Medio','3–4 ore']
  ];
  const req=requests[Math.floor(Math.random()*requests.length)];
- return {id:'w'+day+'_'+index+'_'+Math.random().toString(36).slice(2,7),name:names[Math.floor(Math.random()*names.length)],request:req[0],placement:req[1],size:req[2],duration:req[3],day,status:'waiting',time:12+Math.floor(Math.random()*7),minute:[0,15,30,45][Math.floor(Math.random()*4)]};
+ const name=names[Math.floor(Math.random()*names.length)];
+ const stories=[
+  {story:'È un tatuaggio dedicato a una persona importante della sua famiglia. Vuole qualcosa che abbia un significato personale, senza copiare un disegno già visto.',detail:'Porta con sé una vecchia fotografia e vuole trasformarne un dettaglio in un simbolo.',mood:'emotivo',ref:'Ritratto / simbolo commemorativo'},
+  {story:'È il suo primo tatuaggio. Ha salvato diverse immagini online, ma non sa ancora quale stile scegliere e teme di pentirsi.',detail:'Chiede di vedere due proposte diverse prima di decidere.',mood:'insicuro',ref:'Moodboard con 3 idee differenti'},
+  {story:'Ha già diversi tatuaggi e vuole iniziare un progetto più grande, costruito nel tempo e coerente con quelli che ha già.',detail:'Tiene molto alla continuità del progetto e alla composizione sulla zona del corpo.',mood:'appassionato',ref:'Composizione di più elementi'},
+  {story:'Arriva con una reference salvata sui social. Gli piace l’idea generale, ma vuole personalizzarla per non avere un tatuaggio identico a quello di altre persone.',detail:'Vuole mantenere il soggetto ma cambiare dettagli, proporzioni e stile.',mood:'creativo',ref:'Reference social da reinterpretare'},
+  {story:'Sta coprendo un vecchio tatuaggio che non sente più suo. È un po’ preoccupato che il risultato finale non copra bene il lavoro precedente.',detail:'Vuole capire cosa è possibile fare davvero prima di fissare la seduta.',mood:'preoccupato',ref:'Esempio cover-up'},
+  {story:'Ha messo da parte dei soldi per questo tatuaggio. Gli piace la qualità, ma deve rispettare un budget preciso.',detail:'Preferisce un progetto più piccolo fatto bene piuttosto che un lavoro grande fuori budget.',mood:'pratico',ref:'Reference essenziale e pulita'}
+ ];
+ const story=stories[Math.floor(Math.random()*stories.length)];
+ const referenceArt=['✦','♜','❀','☾','♛','⚓','🐍','🦋','🌹','🗡️','🕊️','☼'][Math.floor(Math.random()*12)];
+ return {id:'w'+day+'_'+index+'_'+Math.random().toString(36).slice(2,7),name,request:req[0],placement:req[1],size:req[2],duration:req[3],story:story.story,detail:story.detail,mood:story.mood,referenceLabel:story.ref,referenceArt,referenceNote:'Immagine portata dal cliente: da usare come ispirazione, non da copiare.',day,status:'waiting',time:12+Math.floor(Math.random()*7),minute:[0,15,30,45][Math.floor(Math.random()*4)]};
 }
 function generateWalkInsForDay(day){
  if(['Mercoledì','Domenica'].includes(weekdayFor(day)))return;
@@ -803,10 +815,60 @@ function generateWalkInsForDay(day){
 }
 function walkInMenu(){
  const today=walkInClients.filter(c=>c.day===gameDay&&c.status==='waiting'&&(career===6?/^piercing$/i.test(c.request):!/^piercing$/i.test(c.request)));
- const rows=today.map(c=>`<div class="card"><b>${c.name}</b><p>${c.request} · ${c.placement} · ${c.size}</p><p class="small">Richiesta spontanea · Arrivo indicativo ${String(c.time).padStart(2,'0')}:${String(c.minute||0).padStart(2,'0')} · ${c.duration}</p><button class="btn" data-walkin="${c.id}">Ricevi cliente</button><button class="btn" data-walkin-book="${c.id}">Fissa in agenda</button></div>`).join('');
+ const rows=today.map(c=>`<div class="card"><b>${c.name}</b><p>${c.request} · ${c.placement} · ${c.size}</p><div style="display:flex;gap:12px;align-items:center;margin:10px 0;padding:10px;border:1px solid #65745d;border-radius:12px;background:#202b23"><div style="width:76px;height:76px;flex:0 0 76px;border-radius:9px;background:linear-gradient(145deg,#e8d9c0,#b9c7b1);display:grid;place-items:center;color:#263329;font-size:42px">${c.referenceArt||'✦'}</div><div><b>📎 ${c.referenceLabel||'Reference del cliente'}</b><p class="small">${c.referenceNote||'Immagine di ispirazione portata dal cliente.'}</p></div></div><p>${c.story||'Ha un’idea personale da sviluppare insieme al tatuatore.'}</p><p class="small">${c.detail||''} · Stato emotivo: ${c.mood||'curioso'}</p><p class="small">Richiesta spontanea · Arrivo indicativo ${String(c.time).padStart(2,'0')}:${String(c.minute||0).padStart(2,'0')} · ${c.duration}</p><button class="btn" data-walkin="${c.id}">Ricevi cliente</button><button class="btn" data-walkin-book="${c.id}">Fissa in agenda</button></div>`).join('');
  openPanel(`<h2>🚶 ${career===6?'Richieste piercing':'Clienti senza appuntamento'}</h2><p>Oggi sono passati ${today.length} ${career===6?'clienti per un piercing':'clienti spontaneamente'}. L'affluenza cambia ogni giorno: può essere una giornata tranquilla o arrivare un picco improvviso.</p>${rows||'<p class="small">Nessun cliente in attesa oggi. Potrebbero arrivare più tardi.</p>'}`);
  document.querySelectorAll('[data-walkin]').forEach(b=>b.onclick=()=>receiveWalkIn(b.dataset.walkin));
  document.querySelectorAll('[data-walkin-book]').forEach(b=>{b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const id=b.getAttribute('data-walkin-book');bookWalkIn(id)})});
+}
+const CUSTOMER_PERSONALITIES=[
+ {id:'indeciso',label:'Indeciso',patience:82,price:58,loyalty:35,detail:72,style:'Vuole essere rassicurato e vedere alternative.'},
+ {id:'tirchio',label:'Attento al prezzo',patience:48,price:96,loyalty:25,detail:40,style:'Confronta i prezzi e prova a trattare.'},
+ {id:'appassionato',label:'Appassionato',patience:78,price:38,loyalty:68,detail:94,style:'Cerca qualità, tecnica e un progetto curato.'},
+ {id:'frettoloso',label:'Fretta',patience:25,price:48,loyalty:20,detail:35,style:'Vuole tempi rapidi e poche complicazioni.'},
+ {id:'esigente',label:'Molto esigente',patience:54,price:30,loyalty:55,detail:100,style:'Ha aspettative alte e nota ogni dettaglio.'},
+ {id:'fedele',label:'Cliente abituale',patience:92,price:42,loyalty:96,detail:70,style:'Dà valore al rapporto e torna se si fida.'},
+ {id:'social',label:'Social e tendenze',patience:60,price:55,loyalty:48,detail:65,style:'Vuole un risultato riconoscibile da condividere.'}
+];
+function ensureCustomerMind(c){
+ if(!c)return null;
+ if(c.mind&&c.mind.id)return c.mind;
+ const old=customerMemory.find(x=>String(x.name).toLowerCase()===String(c.name).toLowerCase());
+ const base=CUSTOMER_PERSONALITIES[Math.floor(Math.random()*CUSTOMER_PERSONALITIES.length)];
+ c.mind={...base,budget:Math.round((career===6?90:180)*(0.75+Math.random()*1.9)/10)*10,expectation:55+Math.floor(Math.random()*41),fameSeeking:Math.random()<0.18,visits:old?.visits||0,trust:old?.trust??(35+Math.floor(Math.random()*31)),lastQuality:old?.lastQuality??null,history:old?.history||[],negotiated:false};
+ if(old){c.mind.id='fedele';c.mind.label='Cliente che ritorna';c.mind.loyalty=Math.min(100,(old.loyalty||60)+10);c.mind.trust=Math.min(100,(old.trust||50)+15);c.mind.budget=Math.max(c.mind.budget,old.budget||0);}
+ return c.mind;
+}
+function customerOpeningLine(c){
+ const m=ensureCustomerMind(c);const lines={indeciso:'Ho un paio di idee, ma non so quale mi starebbe meglio. Mi aiuti a scegliere?',tirchio:'Vorrei capire subito quanto mi costa: ho un budget preciso.',appassionato:'Seguo il mondo tattoo da anni: per me contano soprattutto tecnica e risultato.',frettoloso:'Ho poco tempo, vorrei organizzare tutto senza troppi passaggi.',esigente:'Ho un’idea abbastanza precisa e ci tengo molto ai dettagli.',fedele:'Sono tornato perché mi ero trovato bene l’altra volta!',social:'Vorrei qualcosa che si distingua e venga bene anche nelle foto.'};
+ return lines[m.id]||'Vorrei un tatuaggio fatto bene e qualcosa che mi rappresenti.';
+}
+function customerMindCard(c){
+ const m=ensureCustomerMind(c);if(!m)return '';
+ return `<div class="card"><b>🧠 Profilo cliente · ${m.label}</b><p>${m.style}</p><p class="small">Budget indicativo: €${m.budget} · Pazienza: ${m.patience}/100 · Fiducia: ${m.trust}/100 · Aspettative: ${m.expectation}/100</p>${m.visits?`<p class="small">Cliente di ritorno · ${m.visits} lavori precedenti${m.lastQuality!==null?' · Ultima qualità: '+m.lastQuality+'/100':''}</p>`:''}${m.fameSeeking?'<p class="small">⭐ È attratto dagli artisti con alta reputazione.</p>':''}</div>`;
+}
+function customerQuoteDecision(c,price){
+ const m=ensureCustomerMind(c);const famePenalty=m.fameSeeking&&rep<35?12:0;
+ const budgetLimit=m.budget*(0.78+(m.trust/100)*0.35+(m.loyalty/100)*0.18);
+ const pricePressure=Math.max(0,(price-budgetLimit)/Math.max(1,budgetLimit))*m.price;
+ const trustBonus=(m.trust-50)*0.35+(m.loyalty-40)*0.22;
+ const score=50+trustBonus-pricePressure-famePenalty+(m.expectation>85?((price<=budgetLimit)?8:-8):0);
+ return {accept:score>=36||price<=m.budget*0.72,score,budgetLimit:Math.round(budgetLimit)};
+}
+function rememberCustomer(c,quality,paid){
+ if(!c)return;const m=c.mind||ensureCustomerMind(c);if(!m)return;
+ const idx=customerMemory.findIndex(x=>String(x.name).toLowerCase()===String(c.name).toLowerCase());
+ const entry={name:c.name,visits:(m.visits||0)+1,lastQuality:quality,trust:Math.max(0,Math.min(100,Math.round((m.trust||50)+(quality>=80?12:quality>=65?3:-18)))),loyalty:Math.max(0,Math.min(100,Math.round((m.loyalty||40)+(quality>=80?10:quality<55?-12:3)))),budget:m.budget,history:[...(m.history||[]),{style:c.style,placement:c.placement,quality,paid,day:gameDay}].slice(-8)};
+ if(idx>=0)customerMemory[idx]=entry;else customerMemory.push(entry);
+}
+function handleCustomerQuote(){
+ const c=client;if(!c)return;const price=Number(c.pricePerSession)||0;const result=customerQuoteDecision(c,price);const m=ensureCustomerMind(c);
+ if(result.accept){m.trust=Math.min(100,m.trust+5);confirmClient(c.size,price);return;}
+ if(!m.negotiated){m.negotiated=true;openPanel(`<h2>💬 Il cliente vuole trattare</h2>${customerMindCard(c)}<p>«Mi piace il progetto, ma a questo prezzo non riesco. Il mio budget è intorno a €${m.budget}. Possiamo trovare un accordo?»</p><button class="btn primary" id="negotiateCustomer">Rivedi il prezzo (-15%)</button><button class="btn" id="holdPriceCustomer">Mantieni il prezzo</button><button class="btn" id="loseCustomer">Lascia andare il cliente</button>`);
+  document.querySelector('#negotiateCustomer').onclick=()=>{c.pricePerSession=Math.max(50,Math.round(price*.85/5)*5);const r=customerQuoteDecision(c,c.pricePerSession);if(r.accept){m.trust=Math.min(100,m.trust+8);confirmClient(c.size,c.pricePerSession)}else{m.trust=Math.max(0,m.trust-5);openPanel(`<h2>Il cliente rifiuta</h2><p>«Anche così è fuori dal mio budget. Magari ci risentiamo.»</p><button class="btn" id="closeLostCustomer">Chiudi consulenza</button>`);document.querySelector('#closeLostCustomer').onclick=()=>{client=null;save(false);closePanel();draw()}}};
+  document.querySelector('#holdPriceCustomer').onclick=()=>{m.trust=Math.max(0,m.trust-4);openPanel(`<h2>Il cliente ci pensa</h2><p>«Capisco, ma per ora preferisco non procedere.»</p><button class="btn" id="closeHoldCustomer">Chiudi</button>`);document.querySelector('#closeHoldCustomer').onclick=()=>{client=null;save(false);closePanel();draw()}};
+  document.querySelector('#loseCustomer').onclick=()=>{m.trust=Math.max(0,m.trust-8);client=null;save(false);closePanel();draw();toast('Il cliente ha scelto di non procedere.')};return;
+ }
+ m.trust=Math.max(0,m.trust-10);openPanel(`<h2>❌ Preventivo rifiutato</h2><p>«Mi dispiace, è oltre quello che posso spendere. Per ora lascio perdere.»</p><button class="btn" id="closeRejectedCustomer">Chiudi consulenza</button>`);document.querySelector('#closeRejectedCustomer').onclick=()=>{client=null;save(false);closePanel();draw()};
 }
 function resumeCurrentConsultation(){
  if(!client)return false;
@@ -823,7 +885,7 @@ function receiveWalkIn(id){
  if(career!==6&&/^piercing$/i.test(c.request)){toast('Questa richiesta è per Fabiola: seleziona la carriera Piercer.');return}
  if(!requireOpen())return;if(career===null){toast('Seleziona prima una carriera');return}if(client){toast('Hai già un cliente in consultazione: riprendi il progetto aperto.');resumeCurrentConsultation();return}
  c.status='received';client={name:c.name,style:null,placement:null,size:null,dialogue:null,walkInId:c.id,walkInRequest:c.request,walkInPlacement:c.placement,walkInSize:c.size};
- save(false);consultStep1();
+ ensureCustomerMind(client);save(false);consultStep1();
 }
 function bookWalkIn(id){
  const c=walkInClients.find(x=>String(x.id)===String(id)&&x.status==='waiting');
@@ -867,15 +929,15 @@ function agendaMenu(){
  document.querySelector('#openWalkIns').onclick=walkInMenu;
  document.querySelector('#addAppointment').onclick=()=>{const name=document.querySelector('#apptName').value.trim(),dateValue=document.querySelector('#apptDate').value,time=document.querySelector('#apptTime').value,type=document.querySelector('#apptType').value,note=document.querySelector('#apptNote').value.trim();if(!name){toast('Inserisci il nome del cliente.');return}if(!dateValue){toast('Scegli una data.');return}const [yy,mo,dd]=dateValue.split('-').map(Number),day=toDay(new Date(Date.UTC(yy,mo-1,dd)));if(day<gameDay){toast('Non puoi fissare nel passato.');return}if(['Mercoledì','Domenica'].includes(weekdayFor(day))){toast('Lo studio è chiuso mercoledì e domenica.');return}if(appointments.some(a=>Number(a.day)===day&&a.time===time&&a.status==='booked')){toast('Hai già un appuntamento a quest’ora.');return}appointments.push({id:'a'+Date.now(),name,day,time,type,note,status:'booked',artistIndex:aiArtistForRequest(type+' '+note)});save(false);agendaMenu();toast('Appuntamento fissato!')};
  document.querySelectorAll('[data-delete-appt]').forEach(b=>b.onclick=()=>{const a=appointments.find(x=>x.id===b.dataset.deleteAppt);if(!a)return;const late=a.status==='booked'&&Number(a.day)<=gameDay;openPanel(`<h2>❌ Annulla appuntamento</h2><div class="card"><b>${a.name}</b><p>${a.type||'Tatuaggio'} · ${a.day===gameDay?'Oggi':'Giorno '+a.day} · ${a.time}</p></div><p>${late?'Annullare a ridosso dell’appuntamento può danneggiare la reputazione dello studio.':'Puoi annullare senza penalità perché c’è ancora tempo.'}</p><button class="btn" id="confirmCancelAppt">Conferma annullamento</button><button class="btn" id="keepAppt">Torna all’agenda</button>`);document.querySelector('#confirmCancelAppt').onclick=()=>{a.status='cancelled';a.cancelledBy='studio';if(late){rep=Math.max(0,rep-2);toast('Annullamento tardivo: reputazione -2.');}else toast('Appuntamento annullato.');save(false);agendaMenu()};document.querySelector('#keepAppt').onclick=()=>agendaMenu()});
- document.querySelectorAll('[data-start-appt]').forEach(b=>b.onclick=()=>{const a=appointments.find(x=>x.id===b.dataset.startAppt);if(!a)return;if(!studioOpen()){toast('Lo studio non è aperto.');return}const [hh,mm]=a.time.split(':').map(Number);if(gameMinutes>hh*60+(mm||0)){toast('L’orario è già passato.');return}gameMinutes=hh*60+(mm||0);client={name:a.name,style:null,placement:null,size:null,dialogue:null,appointmentId:a.id,appointmentType:a.type,appointmentNote:a.note};save(false);updateClock();consultStep1()});
+ document.querySelectorAll('[data-start-appt]').forEach(b=>b.onclick=()=>{const a=appointments.find(x=>x.id===b.dataset.startAppt);if(!a)return;if(!studioOpen()){toast('Lo studio non è aperto.');return}const [hh,mm]=a.time.split(':').map(Number);if(gameMinutes>hh*60+(mm||0)){toast('L’orario è già passato.');return}gameMinutes=hh*60+(mm||0);client={name:a.name,style:null,placement:null,size:null,dialogue:null,appointmentId:a.id,appointmentType:a.type,appointmentNote:a.note};ensureCustomerMind(client);save(false);updateClock();consultStep1()});
 }
 function clientMenu(){if(!requireOpen())return;if(career===null){toast('Seleziona prima una carriera');careerMenu();return}if(client){resumeCurrentConsultation();return}
  const waitingWalkIns=walkInClients.filter(c=>c.day===gameDay&&c.status==='waiting');
  if(waitingWalkIns.length){openPanel(`<h2>🚶 Clienti spontanei</h2><p>${waitingWalkIns.length} persone sono passate oggi senza appuntamento.</p><button class="btn" id="seeWalkIns">Vedi richieste e scegli</button><button class="btn" id="continueClientMenu">Altro</button>`);document.querySelector('#seeWalkIns').onclick=walkInMenu;document.querySelector('#continueClientMenu').onclick=()=>{closePanel();if(activeProject)clientMenu();else startNewClient()};return}
  if(activeProject){openPanel(`<h2>Progetto in corso</h2><div class="card"><b>${activeProject.name}</b><p>${activeProject.style} · ${activeProject.placement}</p><p>Seduta ${activeProject.completedSessions+1} di ${activeProject.totalSessions}</p><p>Compenso per seduta: €${activeProject.pricePerSession}</p></div><button class="btn" id="resumeProject">Riprendi la seduta</button><button class="btn" id="laterProject">Più tardi</button><button class="btn" id="newClientAnyway">Nuovo cliente</button>`);document.querySelector('#resumeProject').onclick=()=>startProjectSession();document.querySelector('#laterProject').onclick=closePanel;document.querySelector('#newClientAnyway').onclick=()=>startNewClient();return}
  startNewClient()}
-function startNewClient(){client={name:['Michele','Sara','Luca','Giulia','Marco','Elena'][Math.floor(Math.random()*6)],style:null,placement:null,size:null,dialogue:null};consultStep1()}
-function consultStep1(){let a=cast[career];const isPiercer=career===6;openPanel(`<h2>${isPiercer?'Consulenza piercing':'Consultazione'} · ${client.name}</h2><p>Cliente: «Ciao! ${isPiercer?'Vorrei fare un piercing e vorrei un consiglio su zona e gioiello.':'Vorrei un tatuaggio, ma vorrei scegliere l’idea insieme a te.'}»</p><p><b>Che progetto proponiamo?</b></p><div class="cards">${(career===6?['Nostril','Septum','Lobo','Helix','Forward Helix','Tragus','Conch','Daith','Rook','Snug','Industrial','Navel','Surface','Dermal','Nipple',...intimatePiercings.map(p=>p)]:['Flash classico','Lettering','Soggetto personalizzato','Composizione da reference']).map(v=>`<button class="choice" data-style="${v}">${v}</button>`).join('')}</div><p class="small">Specialità: ${a.role}</p><button class="btn" id="consultCancel">Chiudi</button>`);document.querySelectorAll('[data-style]').forEach(el=>el.onclick=()=>{client.style=el.dataset.style;consultStep2()});document.querySelector('#consultCancel').onclick=()=>{client=null;closePanel()}}
+function startNewClient(){client={name:['Michele','Sara','Luca','Giulia','Marco','Elena','Andrea','Valentina','Davide','Chiara','Matteo','Alessia'][Math.floor(Math.random()*12)],style:null,placement:null,size:null,dialogue:null};ensureCustomerMind(client);consultStep1()}
+function consultStep1(){let a=cast[career];const isPiercer=career===6;ensureCustomerMind(client);openPanel(`<h2>${isPiercer?'Consulenza piercing':'Consultazione'} · ${client.name}</h2>${customerMindCard(client)}<p>Cliente: «${customerOpeningLine(client)}»</p><p><b>Che progetto proponiamo?</b></p><div class="cards">${(career===6?['Nostril','Septum','Lobo','Helix','Forward Helix','Tragus','Conch','Daith','Rook','Snug','Industrial','Navel','Surface','Dermal','Nipple',...intimatePiercings.map(p=>p)]:['Flash classico','Lettering','Soggetto personalizzato','Composizione da reference']).map(v=>`<button class="choice" data-style="${v}">${v}</button>`).join('')}</div><p class="small">Specialità: ${a.role}</p><button class="btn" id="consultCancel">Chiudi</button>`);document.querySelectorAll('[data-style]').forEach(el=>el.onclick=()=>{client.style=el.dataset.style;consultStep2()});document.querySelector('#consultCancel').onclick=()=>{client=null;closePanel()}}
 function consultStep2(){
  const piercingZones={'Nostril':'Naso','Septum':'Setto nasale','Lobo':'Lobo dell’orecchio','Helix':'Cartilagine superiore dell’orecchio','Forward Helix':'Cartilagine anteriore dell’orecchio','Tragus':'Tragus dell’orecchio','Conch':'Conch dell’orecchio','Daith':'Piega interna della cartilagine','Rook':'Piega superiore interna della cartilagine','Snug':'Cartilagine antihelix','Industrial':'Cartilagine superiore: doppio foro collegato','Navel':'Ombelico','Surface':'Zona idonea per surface piercing (definita in consulenza)','Dermal':'Zona idonea per dermal (definita in consulenza)','Nipple':'Capezzolo','Prince Albert':'Glande, lato inferiore','Reverse Prince Albert':'Glande, lato superiore','Apadravya':'Glande, verticale','Ampallang':'Glande, orizzontale','Frenum':'Lato inferiore del pene','Hafada':'Scroto','Scrotal':'Scroto','Guiche':'Perineo','Lorum':'Base dello scroto','Christina':'Monte di Venere','Vertical Hood (VCH)':'Cappuccio clitorideo, verticale','Horizontal Hood (HCH)':'Cappuccio clitorideo, orizzontale','Triangle':'Area sotto il clitoride','Fourchette':'Forchetta vaginale','Inner Labia':'Labbra interne','Outer Labia':'Labbra esterne'};
  if(career===6 && piercingZones[client.style]){
@@ -1058,9 +1120,9 @@ function confirmConsult(){
  const cost=client.pricePerSession;
  const n=client.totalSessions||1;
  const isPiercing=career===6;
- openPanel(`<h2>${isPiercing?'Conferma piercing':'Conferma cliente'}</h2><div class="card"><b>${client.name}</b><p>${isPiercing?'Piercing':'Progetto'}: ${client.style}</p><p>Posizione: ${client.placement}</p>${isPiercing?`<p>Gioiello: ${client.jewelry||'Titanio implant-grade ASTM F136'}</p><p>Finitura: ${client.jewelryFinish||'Lucida'}</p>`:`<p>Dimensione: ${client.size}</p><p>Sedute previste: ${n}</p>`}<p>Compenso ${isPiercing?'piercing':'per seduta'}: <b>€${cost}</b></p>${!isPiercing?`<p>Valore complessivo: <b>€${cost*n}</b></p>`:''}</div>${clientDifficultyCard(calculateClientDifficulty())}<p>«Perfetto, mi piace! ${isPiercing?'Procediamo con il piercing.':'Prenotiamo la prima seduta.'}»</p><button class="btn" id="acceptClient" type="button">${isPiercing?'Accetta e inizia piercing':'Accetta e inizia sessione'}</button><button class="btn" id="rejectClient" type="button">Rivedi progetto</button>`);
+ ensureCustomerMind(client);const mind=client.mind;const quoteReaction=mind.id==='tirchio'?'«È un po’ più di quanto pensavo…»':mind.id==='esigente'?'«Mi interessa il risultato, ma voglio essere sicuro della qualità.»':mind.id==='indeciso'?'«Mi sembra interessante, devo solo capire se è la scelta giusta.»':'«Vediamo il preventivo e organizziamo il lavoro.»';openPanel(`<h2>${isPiercing?'Conferma piercing':'Conferma cliente'}</h2>${customerMindCard(client)}<div class="card"><b>${client.name}</b><p>${isPiercing?'Piercing':'Progetto'}: ${client.style}</p><p>Posizione: ${client.placement}</p>${isPiercing?`<p>Gioiello: ${client.jewelry||'Titanio implant-grade ASTM F136'}</p><p>Finitura: ${client.jewelryFinish||'Lucida'}</p>`:`<p>Dimensione: ${client.size}</p><p>Sedute previste: ${n}</p>`}<p>Compenso ${isPiercing?'piercing':'per seduta'}: <b>€${cost}</b></p>${!isPiercing?`<p>Valore complessivo: <b>€${cost*n}</b></p>`:''}</div>${clientDifficultyCard(calculateClientDifficulty())}<p>${quoteReaction}</p><button class="btn" id="acceptClient" type="button">${isPiercing?'Accetta e inizia piercing':'Accetta e inizia sessione'}</button><button class="btn" id="rejectClient" type="button">Rivedi progetto</button>`);
  const accept=document.querySelector('#acceptClient');
- if(accept)accept.addEventListener('click',()=>{try{confirmClient(client.size,cost)}catch(err){console.error('Errore accettazione cliente:',err);toast('Errore durante l’accettazione. Riprova.')}} ,{once:true});
+ if(accept)accept.addEventListener('click',()=>{try{handleCustomerQuote()}catch(err){console.error('Errore accettazione cliente:',err);toast('Errore durante l’accettazione. Riprova.')}} ,{once:true});
  const reject=document.querySelector('#rejectClient');
  if(reject)reject.addEventListener('click',()=>isPiercing?consultStep3():consultStep3(),{once:true});
 }
@@ -1076,7 +1138,7 @@ function confirmClient(size,cost){
  const minutes=sessionDurationForSize(size);
  if(gameMinutes+minutes>1140){toast('Non c’è abbastanza tempo oggi per questa seduta. Puoi tornare domani alle 12:00.');return}
  client.size=size;client.difficulty=calculateClientDifficulty();client.difficultyLabel=clientDifficultyLabel(client.difficulty);client.stage='session';
- activeProject={name:client.name,customerName:client.name,style:client.style,placement:client.placement,size:client.size,refChoice:client.refChoice||null,designMode:client.designMode||(client.freehandResult?'freehand':'reference'),freehandResult:client.freehandResult?JSON.parse(JSON.stringify(client.freehandResult)):null,totalSessions:total,completedSessions:0,pricePerSession:cost,sessionMinutes:career===6?30:minutes,artist:career,isPiercing:career===6,jewelry:client.jewelry||'',jewelryFinish:client.jewelryFinish||''};
+ activeProject={name:client.name,customerName:client.name,style:client.style,placement:client.placement,size:client.size,refChoice:client.refChoice||null,designMode:client.designMode||(client.freehandResult?'freehand':'reference'),freehandResult:client.freehandResult?JSON.parse(JSON.stringify(client.freehandResult)):null,letteringText:client.letteringText||'',letteringFont:client.letteringFont||'chicano',totalSessions:total,completedSessions:0,pricePerSession:cost,sessionMinutes:career===6?30:minutes,artist:career,customerMind:client.mind?JSON.parse(JSON.stringify(client.mind)):null,isPiercing:career===6,jewelry:client.jewelry||'',jewelryFinish:client.jewelryFinish||''};
  save(false);
  if(career===6)startPiercingSession();else startProjectSession();
 }
@@ -1303,7 +1365,7 @@ function finishSession(cost){
    }
   }
  }
- const projectName=activeProject.name;activeProject.lastQuality=quality;activeProject.qualityHistory=activeProject.qualityHistory||[];activeProject.qualityHistory.push(quality);if(client&&client.appointmentId){const booked=appointments.find(a=>a.id===client.appointmentId);if(booked)booked.status='done'}client=null;
+ const projectName=activeProject.name;activeProject.lastQuality=quality;activeProject.qualityHistory=activeProject.qualityHistory||[];activeProject.qualityHistory.push(quality);if(client&&client.appointmentId){const booked=appointments.find(a=>a.id===client.appointmentId);if(booked)booked.status='done'}if(finishedProject){rememberCustomer({name:activeProject.customerName||activeProject.name,style:activeProject.style,placement:activeProject.placement,mind:activeProject.customerMind},quality,cost)}client=null;
  const completed=activeProject.completedSessions,total=activeProject.totalSessions;
  const completedProject=finishedProject?{...activeProject}:null;
  const setupRecord=activeProject.tattooSetup||{};
@@ -1544,8 +1606,19 @@ function currentArtistName(){return career===null?'Profilo':(cast[career]?.name|
 function currentArtistKey(){return currentArtistName().toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9]+/g,'_')}
 function loadGameIgPosts(){try{return JSON.parse(localStorage.getItem('fh_personal_ig_posts_'+currentArtistKey())||'[]')}catch(e){return []}}
 function loadGameIgGallery(){try{return JSON.parse(localStorage.getItem('fh_personal_ig_gallery_'+currentArtistKey())||'[]')}catch(e){return []}}
-function gameIgPostImage(post){return post?.image||gameTattooImage(post?.refChoice,post?.freehandResult)}
-function gameTattooImage(refChoice,freehandResult){
+function gameIgPostImage(post){return post?.image||gameTattooImage(post?.refChoice,post?.freehandResult,post?.letteringText,post?.letteringFont)}
+function gameTattooImage(refChoice,freehandResult,letteringText,letteringFont){
+ if(String(letteringText||'').trim()){
+  const esc=v=>String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&apos;');
+  const fontMap={chicano:'cursive',blackletter:'serif',corsivo:'cursive',gotico:'serif',calligrafico:'cursive',typewriter:'monospace'};
+  const family=fontMap[letteringFont]||'cursive';
+  const italic=['corsivo','calligrafico'].includes(letteringFont)?'italic':'normal';
+  const weight=['chicano','blackletter','gotico'].includes(letteringFont)?'bold':'normal';
+  const text=esc(String(letteringText).trim());
+  const safeFont=family;
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 700"><rect width="700" height="700" rx="24" fill="#f1eee5"/><path d="M70 120 Q350 65 630 120 M70 580 Q350 635 630 580" fill="none" stroke="#b9ad98" stroke-width="3"/><text x="350" y="350" text-anchor="middle" dominant-baseline="middle" fill="#252321" font-family="'+safeFont+'" font-size="'+(text.length>28?42:text.length>18?52:68)+'" font-style="'+italic+'" font-weight="'+weight+'" letter-spacing="'+(letteringFont==='typewriter'?3:0)+'">'+text+'</text><text x="350" y="650" text-anchor="middle" fill="#807665" font-family="Arial,sans-serif" font-size="18" letter-spacing="5">LETTERING</text></svg>'
+  return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+ }
  if(freehandResult){
   const subject=String(freehandResult.Soggetto?.[0]||freehandResult.subject||'Disegno originale');
   const palette=String(freehandResult.Palette?.[0]||(freehandResult.palette||[]).join(' · ')||'Black & grey');
@@ -1566,8 +1639,8 @@ function gameTattooImage(refChoice,freehandResult){
 }
 function takeFinishedTattooPhoto(project){
  if(!project)return;
- const photo={name:project.name,style:project.style,placement:project.placement,size:project.size,refChoice:project.refChoice||null,freehandResult:project.freehandResult||null,designMode:project.designMode||'reference',date:weekdayFor(gameDay)+' '+gameDateText()+' · '+clockText(),caption:'Nuovo lavoro completato ✨'};
- openPanel(`<h2>📸 Seduta completata!</h2><p>Vuoi fotografare il tatuaggio appena realizzato?</p><div class="igPreview"><img src="${gameTattooImage(photo.refChoice,photo.freehandResult)}"><b>${photo.name}</b><small>${photo.style} · ${photo.placement}</small></div><button class="btn" id="keepTattooPhoto">📱 Salva sul telefono</button><button class="btn" id="publishTattooPhoto">📸 Pubblica sul mio Instagram</button><button class="btn" id="skipTattooPhoto">Non fare la foto</button>`);
+ const photo={name:project.name,style:project.style,placement:project.placement,size:project.size,refChoice:project.refChoice||null,freehandResult:project.freehandResult||null,designMode:project.designMode||'reference',letteringText:project.letteringText||'',letteringFont:project.letteringFont||'chicano',date:weekdayFor(gameDay)+' '+gameDateText()+' · '+clockText(),caption:'Nuovo lavoro completato ✨'};
+ openPanel(`<h2>📸 Seduta completata!</h2><p>Vuoi fotografare il tatuaggio appena realizzato?</p><div class="igPreview"><img src="${gameTattooImage(photo.refChoice,photo.freehandResult,photo.letteringText,photo.letteringFont)}"><b>${photo.name}</b><small>${photo.style} · ${photo.placement}</small></div><button class="btn" id="keepTattooPhoto">📱 Salva sul telefono</button><button class="btn" id="publishTattooPhoto">📸 Pubblica sul mio Instagram</button><button class="btn" id="skipTattooPhoto">Non fare la foto</button>`);
  const savePhoto=(publish)=>{
   const posts=loadGameIgPosts();const entry={...photo,likes:publish?Math.floor(4+Math.random()*18):0,published:!!publish};
   if(publish){entry.caption='Nuovo lavoro completato ✨ '+photo.style+' · '+photo.placement;posts.push(entry);localStorage.setItem('fh_personal_ig_posts_'+currentArtistKey(),JSON.stringify(posts));toast('Pubblicato sul tuo Instagram! + follower e reputazione');rep+=2;if(career!==null)artistRep[career]=(artistRep[career]||0)+5}
@@ -2387,7 +2460,7 @@ function switchSaveSlot(id){
  toast(raw?'Caricata: '+slot.name:'Slot vuoto selezionato: '+slot.name);
 }
 function resetCareerState(){
- cash=STARTING_BUDGET;rep=0;career=null;client=null;finished=0;missionDone=false;decor=0;missionProgress={};artistRep={};artistSkills={drawing:0,technique:0,hygiene:0,speed:0,communication:0};ownedGear=[];inkStock=[];supplyUnits={};machineAge={};equipmentWear={};shopPurchases={};studioExpansion=0;studioStaff=[];characterCustomization={hair:'Castano',outfit:'Streetwear',outfitColor:'Nero',accessory:'Nessuno'};gameMinutes=720;gameDay=1;activeProject=null;pendingCash=0;appointments=[];walkInClients=[];
+ cash=STARTING_BUDGET;rep=0;career=null;client=null;finished=0;missionDone=false;decor=0;missionProgress={};artistRep={};artistSkills={drawing:0,technique:0,hygiene:0,speed:0,communication:0};ownedGear=[];inkStock=[];supplyUnits={};machineAge={};equipmentWear={};shopPurchases={};studioExpansion=0;studioStaff=[];characterCustomization={hair:'Castano',outfit:'Streetwear',outfitColor:'Nero',accessory:'Nessuno'};gameMinutes=720;gameDay=1;activeProject=null;pendingCash=0;appointments=[];walkInClients=[];customerMemory=[];
 }
 function renderSaveSlots(){
  const host=document.querySelector('#saveSlotsList');if(!host)return;
@@ -2411,10 +2484,10 @@ function prepareNewCareer(){
  const slot=createSaveSlot('Carriera '+(slots.length+1));if(slot)newGamePicker();
 }
 function applySaveData(d){
- cash=d.cash??180;rep=d.rep??0;career=d.career??null;finished=d.finished??0;decor=d.decor??0;missionProgress=d.missionProgress||{};artistRep=d.artistRep||{};gameMinutes=d.gameMinutes??720;gameDay=d.gameDay??1;activeProject=d.activeProject??null;pendingCash=d.pendingCash??0;appointments=d.appointments??[];walkInClients=d.walkInClients??[];artistSkills=d.artistSkills||{drawing:0,technique:0,hygiene:0,speed:0,communication:0};ownedGear=d.ownedGear||[];inkStock=d.inkStock||[];supplyUnits=d.supplyUnits||{};machineAge=d.machineAge||{};equipmentWear=d.equipmentWear||{};shopPurchases=d.shopPurchases||{};studioExpansion=d.studioExpansion||0;studioStaff=d.studioStaff||[];characterCustomization=d.characterCustomization||{hair:'Castano',outfit:'Streetwear',outfitColor:'Nero',accessory:'Nessuno'};
+ cash=d.cash??180;rep=d.rep??0;career=d.career??null;finished=d.finished??0;decor=d.decor??0;missionProgress=d.missionProgress||{};artistRep=d.artistRep||{};gameMinutes=d.gameMinutes??720;gameDay=d.gameDay??1;activeProject=d.activeProject??null;pendingCash=d.pendingCash??0;appointments=d.appointments??[];walkInClients=d.walkInClients??[];artistSkills=d.artistSkills||{drawing:0,technique:0,hygiene:0,speed:0,communication:0};ownedGear=d.ownedGear||[];inkStock=d.inkStock||[];supplyUnits=d.supplyUnits||{};machineAge=d.machineAge||{};equipmentWear=d.equipmentWear||{};shopPurchases=d.shopPurchases||{};studioExpansion=d.studioExpansion||0;studioStaff=d.studioStaff||[];characterCustomization=d.characterCustomization||{hair:'Castano',outfit:'Streetwear',outfitColor:'Nero',accessory:'Nessuno'};customerMemory=d.customerMemory||[];
 }
 function save(showToast=true){
- let data={cash,rep,career,finished,decor,missionProgress,artistRep,gameMinutes,gameDay,activeProject,pendingCash,appointments,walkInClients,artistSkills,ownedGear,inkStock,supplyUnits,machineAge,equipmentWear,shopPurchases,studioExpansion,studioStaff,characterCustomization,starSystemMax:12};
+ let data={cash,rep,career,finished,decor,missionProgress,artistRep,gameMinutes,gameDay,activeProject,pendingCash,appointments,walkInClients,artistSkills,ownedGear,inkStock,supplyUnits,machineAge,equipmentWear,shopPurchases,studioExpansion,studioStaff,characterCustomization,customerMemory,starSystemMax:12};
  try{if(!activeSaveSlotId)ensureSaveSlots();localStorage.setItem(slotStorageKey(activeSaveSlotId),JSON.stringify(data));updateActiveSlotMeta(data);if(showToast)toast('Salvataggio completato · '+(activeSaveSlot()?.name||'Carriera'))}
  catch(e){toast('Errore salvataggio: storage non disponibile')}
 }
